@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by anand on 23/01/2017.
@@ -25,8 +26,18 @@ public class Utility {
         java.sql.Statement statement = null;
         ResultSet resultSet = null;
         String GRAPH_NAME = "http://www.innovation.com/schemas/virtrdf#";
+        String RDF_TYPE_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
         List<com.aequalis.util.Statement> allStatements = new ArrayList<com.aequalis.util.Statement>();
+
+        final String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+
+        com.aequalis.util.Statement newStatement = new com.aequalis.util.Statement();
+        newStatement.setSubject(GRAPH_NAME + uuid);
+        newStatement.setPredicate( RDF_TYPE_NS );
+        newStatement.setObject(GRAPH_NAME + strOntoClassName);
+
+        allStatements.add(newStatement);
 
         try {
             connection = ConnectionConfiguration.getConnection();
@@ -37,14 +48,18 @@ public class Utility {
 
                 for (Map.Entry entry : propertyMapping.entrySet()){
 
-                    String associatedProperty = entry.getValue().toString();
+                    if (!resultSet.getObject(entry.getKey().toString()).toString().isEmpty()) {
 
-                    com.aequalis.util.Statement newStatement = new com.aequalis.util.Statement();
-                    newStatement.setSubject(GRAPH_NAME + strOntoClassName);
-                    newStatement.setPredicate(GRAPH_NAME + associatedProperty);
-                    newStatement.setObject(resultSet.getObject(entry.getKey().toString()).toString());
+                        String associatedProperty = entry.getValue().toString();
 
-                    allStatements.add(newStatement);
+                        newStatement = new com.aequalis.util.Statement();
+                        newStatement.setSubject(GRAPH_NAME + strOntoClassName);
+                        newStatement.setPredicate(GRAPH_NAME + associatedProperty);
+                        newStatement.setObject(resultSet.getObject(entry.getKey().toString()).toString());
+
+                        allStatements.add(newStatement);
+
+                    }
 
                 }
 

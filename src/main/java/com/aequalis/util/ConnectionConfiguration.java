@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 
 public class ConnectionConfiguration {
-    public static final String URL = "jdbc:mysql://192.168.1.19:3306/slingschemaupdated";
+    public static final String URL = "jdbc:mysql://192.168.1.22:3306/slingschemaupdated";
     /**
      * In my case username is "root" *
      */

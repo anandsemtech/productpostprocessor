@@ -1,5 +1,6 @@
 package com.aequalis.controller;
 
+import com.aequalis.bean.AppRequest;
 import com.aequalis.util.Statement;
 import com.aequalis.util.Utility;
 import com.hp.hpl.jena.graph.Node;
@@ -14,9 +15,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import io.swagger.annotations.*;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import virtuoso.jdbc4.VirtuosoConnectionPoolDataSource;
 import virtuoso.jena.driver.VirtGraph;
 import virtuoso.jena.driver.VirtModel;
@@ -44,8 +43,8 @@ public class OntologyOperations {
             @ApiResponse(code = 404, message = "Not Found"),
             @ApiResponse(code = 500, message = "Failure")})
 
-    @RequestMapping(method = RequestMethod.GET)
-    public @ResponseBody String importToRDF(String strTableName, String strOntoClassName, HashMap propertyMapping){
+    @RequestMapping(value = "import2RDF",method = RequestMethod.POST)
+    public @ResponseBody String importToRDF(@RequestBody List<AppRequest> appRequests){
 
         VirtuosoConnectionPoolDataSource ds = new VirtuosoConnectionPoolDataSource();
         ds.setUser("dba");
@@ -53,40 +52,47 @@ public class OntologyOperations {
         ds.setPortNumber(1111);
         ds.setServerName("localhost");
         int threads = 4;
+
         try {
             ds.setMaxPoolSize(4);
         } catch (final SQLException e) {
             throw new RuntimeException("Unable to configure virtuoso connection pool size", e);
         }
 
-        VirtGraph virtGraph = new VirtGraph(ds);
-        List<Statement> allStatements = Utility.getDBStatements(strTableName, strOntoClassName, propertyMapping);
+        VirtGraph virtGraph = new VirtGraph("http://www.innovation.com/schemas/virtrdf#", ds);
 
-        try {
-            Model m = null;
+        for (AppRequest appRequest : appRequests){
+
+            List<Statement> allStatements = Utility.getDBStatements(appRequest.getTableName(), appRequest.getOntologyClassName(), appRequest.getPropertyMapping());
+
             try {
+                Model m = null;
+                try {
 
-                m = new VirtModel(virtGraph);
-                for (com.aequalis.util.Statement statement : allStatements){
+                    m = new VirtModel(virtGraph);
+                    for (com.aequalis.util.Statement statement : allStatements){
 
-                    final Resource subject = m.createResource(statement.getSubject());
-                    final Property predicate = m.createProperty(statement.getPredicate());
-                    final Resource object = m.createResource(statement.getObject());
-                    m.add(subject, predicate, object);
+
+                        final Resource subject = m.createResource(statement.getSubject());
+                        final Property predicate = m.createProperty(statement.getPredicate());
+                        final Resource object = m.createResource(statement.getObject());
+                        m.add(subject, predicate, object);
+
+
+                    }
+
+                } finally {
+                    if (null != m) {
+                        m.close();
+                    }
                 }
-
             } finally {
-                if (null != m) {
-                    m.close();
+                if (null != virtGraph) {
+                    virtGraph.close();
                 }
             }
-        } finally {
-            if (null != virtGraph) {
-                virtGraph.close();
-            }
+
         }
-
-
         return "Successfully Imported!";
     }
 
